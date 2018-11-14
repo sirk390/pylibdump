@@ -11,8 +11,9 @@ from ar_parse import read_lib_file
 
 def main(fname):
     """ Basic python version of the tools:
-        > objdump -d         (linux)
-        > dumpbin /disasm    (MSVC)
+    
+            - "objdump -d" (linux)
+            - "dumpbin /disasm" (MSVC)
         
         It parses the AR and COFF structures, but uses the "capstone" library to disassemble
     """ 
