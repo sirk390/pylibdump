@@ -98,7 +98,7 @@ class Coff():
         pos = 0
         version, nb_sections, timedate, symbol_table_offset, nb_symbols, size_opt_header, flags = struct.unpack_from("<HHlllHH", bindata, pos)
         if size_opt_header != 0:
-            print ("Skipped ----------------------------------------------", size_opt_header)
+            #print ("Skipped ----------------------------------------------", size_opt_header)
             return None
         pos += 20 + size_opt_header
         # TODO parse Optional Header
