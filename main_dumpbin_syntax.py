@@ -39,7 +39,6 @@ def main(fname):
     for coff in read_lib_file(fname): 
         if coff:
             syms = deque(coff.symbols)
-            #print (syms)
             md = Cs(CS_ARCH_X86, CS_MODE_32)
             md.skipdata = True
             # iterate through "CsInsn"
@@ -63,7 +62,7 @@ def main(fname):
 
 
 if __name__ == '__main__':
-    fname = r"D:\TestObjFiles\lib\libcrypto.a"
+    fname = r"D:\TestObjFiles\lib\x86\MSVC\2017_14.15.26726\msvcrt.lib"
 
     main(fname)
     

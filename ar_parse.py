@@ -1,8 +1,15 @@
+"""
+See spec of MSVC library format at (section 7):
+    https://courses.cs.washington.edu/courses/cse378/03wi/lectures/LinkerFiles/coff.pdf
+    
+"""
+
 from attr import dataclass
 from builtins import str, int
 import struct
 from enum import Enum
 from coff_parse import Coff
+import binascii
 
 
 GLOBAL_HEADER_LEN = 8
@@ -52,14 +59,36 @@ def read_gnu_symbols(bindata, pos=0):
     nbsymbols, = struct.unpack_from(">l", bindata, pos)
     pos += 4
     addrs = []
+    vtest, = struct.unpack_from("<l", bindata, pos)
     for i in range(nbsymbols):
         addr, = struct.unpack_from(">l", bindata, pos)
+        #print ("ok", i, addr)
         addrs.append(addr)
         pos += 4
     symbols_names = bindata[pos:].split(b"\x00")[:-1]
     return [(a, s.decode()) for (a, s) in zip(addrs, symbols_names)]
 
-
+def read_second_symbols(bindata, pos=0):
+    """ Not finished implementing 
+        - ADDR_INDEX to ADDR and
+        - NAME TO ADDR_INDEX
+    """
+    nbmembers, = struct.unpack_from("l", bindata, pos)
+    pos += 4
+    offsets = []
+    indexes = []
+    for i in range(nbmembers):
+        offset, = struct.unpack_from("l", bindata, pos)
+        offsets.append(offset)
+        pos += 4
+    nbsymbols, = struct.unpack_from("l", bindata, pos)
+    pos += 4
+    for i in range(nbsymbols):
+        index, = struct.unpack_from("H", bindata, pos)
+        indexes.append(index)
+        pos += 2
+    symbols_names = bindata[pos:].split(b"\x00")[:-1]
+    return [offsets, indexes, symbols_names]
 
 
 def read_lib_file(fname):
@@ -71,6 +100,7 @@ def read_lib_file(fname):
         
         headers = []
         symbols = {}
+        first_symbols = True
         while True:
             #offset = fin.tell()
             header = fin.read(HEADER_LEN)
@@ -80,33 +110,28 @@ def read_lib_file(fname):
                 raise Exception("file header too short")
             pos += len(header)
             header = Header.from_bindata(header, pos)
-            
-            if header.type == HeaderType.GNU_SYMBOLS:
-                bindata = fin.read(header.size)
-                #print (read_gnu_symbols(bindata))
-                symbols.update(dict(read_gnu_symbols(bindata)))
-                #print ("    ", bindata)
-                #print ("    ", read_gnu_symbols(bindata))
-                #for filename in bindata.split(b"\x00"):
-                #    print ("   ", filename)
-
-            elif header.type == HeaderType.GNU:
-                bindata = fin.read(header.size)
-                #for dat in bindata.split(b"\x00"):
-                #    print ("   ", dat) # remove trailing '/'
-
+            bindata = fin.read(header.size)
+            #print (header, header.type == HeaderType.GNU_SYMBOLS and first_symbols)
+            if header.type == HeaderType.GNU_SYMBOLS and first_symbols:
+                res = read_gnu_symbols(bindata)
+                symbols.update(res)
+                print (res)
+                first_symbols = False
+            elif header.type == HeaderType.GNU_SYMBOLS and not first_symbols:
+                res = read_second_symbols(bindata) # todo
+                print ("-----------------------------------------")
+                print (res)
             elif header.type == HeaderType.GNU_TABLE:
-                bindata = fin.read(header.size)
+                assert len(bindata) == header.size
                 '''for filename in bindata.split(b"\x00"):
                     print ("   ", filename[:-1]) # remove trailing '/'''
-            hpos = pos - HEADER_LEN
-            bindata = fin.read(header.size)
-            coff = Coff.from_bindata(bindata)
-            yield coff
+            elif header.type == HeaderType.GNU:
+                hpos = pos - HEADER_LEN
+                if len(bindata) >= 20:
+                    coff = Coff.from_bindata(bindata)
+                    yield coff
             pos = align2(pos + header.size)
             fin.seek(pos)
-
-        #print (len(headers))
 
 
 """

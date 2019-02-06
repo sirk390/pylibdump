@@ -76,8 +76,7 @@ class Section():
         pos += 40
         data = bindata[offset:offset+size]
         relocations = read_relocation_table(bindata, reloc_offset, nb_relocs)
-        #print (relocations)
-        assert nb_linenums == 0
+        #assert nb_linenums == 0
         return Section(name.rstrip(b"\x00"), physical_addr, virtual_addr, size, offset, reloc_offset, file_offset, nb_relocs, nb_linenums, flags, data, relocations), pos
 
 
@@ -97,11 +96,12 @@ class Coff():
     def from_bindata(bindata):
         pos = 0
         version, nb_sections, timedate, symbol_table_offset, nb_symbols, size_opt_header, flags = struct.unpack_from("<HHlllHH", bindata, pos)
-        if size_opt_header != 0:
-            #print ("Skipped ----------------------------------------------", size_opt_header)
-            return None
         pos += 20 + size_opt_header
-        # TODO parse Optional Header
+        '''
+        if size_opt_header != 0:
+            opt_magic, opt_version, opt_text_size, opt_initialized_size, opt_uninitilized_size, opt_entry_point, opt_text_start, opt_data_start = struct.unpack_from("<HHllllll", bindata, pos)
+            print (opt_magic, opt_version, opt_text_size, opt_initialized_size, opt_uninitilized_size, opt_entry_point, opt_text_start, opt_data_start)
+        '''
         sections = []
         for i in range(nb_sections):
             section, pos = Section.from_bindata(bindata, pos)
@@ -109,7 +109,6 @@ class Coff():
         symbols = []
         string_table_pos = symbol_table_offset + nb_symbols * 18 # 18 = size of a symbol entry
         pos = symbol_table_offset
-        
         for i in range(nb_symbols):
             symbol, pos = Symbol.from_bindata(bindata, pos, string_table_pos)
             symbols.append(symbol)
